@@ -3,10 +3,11 @@
 The native UI is a GPUI JavaScript View using the installed `herdr`,
 `gpui-kit` and `gpui-base` APIs. It is not a web view or React app.
 
-- **Launcher:** a 40px block beneath the tabs; opens the dashboard in the
-  existing side-panel stack, or a native mod tab when that stack is absent.
-  It performs no GitHub calls.
-- **Dashboard:** a panel View owns transient in-memory results. Initial load
+- **Launcher:** a sidebar footer with Settings, Dependabot, Tasks (when already
+  installed), and Add machine. Dependabot opens a full native mod tab, or focuses
+  an existing dashboard tab. Original footer mods remain untouched. The footer
+  performs no GitHub calls; old strip/panel blocks are removed during migration.
+- **Dashboard:** a full-tab View owns transient in-memory results. Initial load
   and manual refresh discover local repositories, then run two API workers.
   Successful results remain visible, explicitly stale, after a failed refresh.
   No daemon, token store, persistent alert cache, or paid provider is involved.
@@ -25,7 +26,8 @@ The native UI is a GPUI JavaScript View using the installed `herdr`,
   errors stop new network work. Partial pagination is unavailable, not zero.
 - **Installation:** owned mod receipt, generated absolute backend/Node paths,
   native check before layout write, unique personal-layout backup, concurrent
-  edit checks, and idempotent pure layout transformation. Shipped layouts and
+  edit checks, and idempotent pure layout transformation. Only known Settings/
+  Tasks footers are replaced; unknown custom footers are refused. Shipped layouts and
   unrelated nodes/selections remain untouched.
 
 Tests inject command runners and a small native element/host adapter. This

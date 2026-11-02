@@ -44,10 +44,14 @@ layout without switching to it. Use `herdr-app do layout.switch --name
 my-dashboard` to show it. `--home PATH` or `HERDR_APP_HOME` selects another
 app home.
 
-The installer adds a **Dependabot · Security alerts** launcher beneath tabs,
-and a panel in `panel-body` when that stack exists. Click the launcher to
-show it; otherwise it opens a native mod tab. Existing mods, panel selection,
-and unrelated layout settings are preserved. No keybindings are installed.
+The installer adds a **Dependabot** button in the sidebar footer, **below
+Settings and above Tasks**. It opens a full native dashboard tab, reusing an
+existing Dependabot tab like the Tasks launcher. No toolbar strip or side panel.
+The known Tasks footer (or standard Settings footer) is replaced in the layout
+by this mod's footer; the original mod files remain untouched. Settings, Tasks,
+Add machine, the update indicator and collapsed-sidebar behavior are retained.
+Other custom footers are refused rather than overwritten. Old Dependabot
+strip/panel blocks are migrated away. No keybindings are installed.
 
 Keep this checkout and its Node executable in place: the installed config
 pins their absolute paths. Rebuild and rerun the installer after updates
@@ -65,8 +69,8 @@ By default the backend recursively scans `~/git`. To change roots, create
 ```
 
 Use `DEPENDABOT_CONFIG=/path/to/config.json` for another config file (the
-app must inherit that environment), or a layout block's
-`content.props.roots` array to override roots for that panel. Invalid config
+app must inherit that environment), or the sidebar footer block's
+`content.props.roots` array to override roots for newly opened dashboard tabs. Invalid config
 is an error, not a fallback to another scan. Changes apply on **Refresh**.
 
 Discovery reads configured Git remotes, not just `origin`. Multiple clones,
@@ -85,7 +89,7 @@ pagination never produces a partial count presented as complete.
 
 ## Use
 
-- Load happens when the panel first appears; **Refresh** rescans and fetches.
+- Load happens when the dashboard tab first appears; **Refresh** rescans and fetches.
   No background polling or daemon.
 - Search repository names, packages, manifests, ecosystems, GHSA IDs, CVEs,
   and advisory summaries. Select a severity or toggle alerts/unavailable only.
@@ -95,7 +99,7 @@ pagination never produces a partial count presented as complete.
   Missing permissions/disabled alerts (403/404), auth, connectivity, rate limits,
   and timeouts are explicit errors, **never zero alerts**.
 - Previous successful results survive a failed refresh, labeled stale.
-  Results also become stale after 10 minutes. Hidden panels keep their
+  Results also become stale after 10 minutes. Hidden tabs keep their
   in-memory results; switching layouts/restarting does not persist them.
 
 Optional app commands for existing shown copies: `dependabot.refresh`,
@@ -121,10 +125,12 @@ Linux is locally verified. macOS/Windows live UI behavior is unverified.
 
 ## Remove
 
-Remove blocks `dependabot-strip` and `dependabot-panel` from your personal
-layout, then delete `mods/dependabot` in your app home. No daemon to stop.
-Restore a layout backup only if you have made no later layout edits you
-want to keep. Optional scan config can be deleted separately.
+Close Dependabot tabs, restore the sidebar-footer block to its previous content
+(`obsidian-tasks-footer`, height 97px, for a Tasks setup; or `workspace-chrome`
+with props `{ "footer": true }`, height 69px, for the standard footer), then
+delete `mods/dependabot` in your app home. No daemon to stop. Restore a layout
+backup only if you have made no later layout edits you want to keep. Optional
+scan config can be deleted separately.
 
 ## Development / verification
 

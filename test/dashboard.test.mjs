@@ -102,13 +102,17 @@ async function harness(role = "panel") {
   const api = {
     View: class {},
     div: node,
+    svg: node,
+    spaces: () => [{ id: "fixture-space", active: true, tabs: [] }],
+    panes: () => [],
+    updates: () => ({ app: { ready: false } }),
     h_flex: node,
     v_flex: node,
     Input: { new: node },
     InputState: { new: () => state },
     theme,
     exec,
-    props: () => ({ role }),
+    props: () => ({ role, tasks: true }),
     run: (...args) => commands.push(args),
     layout: () => ({
       id: "root",
@@ -188,12 +192,21 @@ test("refresh failure preserves previous results with explicit stale and unavail
   assert.match(result, /sample-lib/);
 });
 
-test("launcher does not fetch and opens existing side panel through app commands", async () => {
-  const h = await harness("strip");
+test("footer keeps Settings, Dependabot, Tasks order and opens full dashboard tab without fetching", async () => {
+  const h = await harness("footer");
   find(h.view.render(), "dependabot-open").handlers.click({}, h.cx);
   assert.deepEqual(h.commands, [
-    ["layout.show", { id: "panel" }],
-    ["layout.select", { stack: "panel-body", child: "dependabot-panel" }],
+    [
+      "tab.new",
+      {
+        space: "fixture-space",
+        name: "Dependabot",
+        mod: "dependabot",
+        props: { command: "node", args: [], role: "dashboard", tasks: true },
+      },
+    ],
   ]);
+  const rendered = text(h.view.render());
+  assert.match(rendered, /Settings .*Dependabot Tasks Add machine/);
   assert.equal(h.view.rows.length, 0);
 });

@@ -17,7 +17,15 @@ export const run: Runner = (command, args, options = {}) =>
         ...options,
         timeout: options.timeout ?? 12000,
         maxBuffer: 6 * 1024 * 1024,
-        env: { ...process.env, GH_PROMPT_DISABLED: "1", GH_PAGER: "cat", GIT_TERMINAL_PROMPT: "0" },
+        env: {
+          ...process.env,
+          GH_PROMPT_DISABLED: "1",
+          GH_PAGER: "cat",
+          GIT_TERMINAL_PROMPT: "0",
+          MISE_QUIET: "1",
+          NO_COLOR: "1",
+          GH_FORCE_TTY: "",
+        },
       },
       (error, stdout, stderr) => (error ? no(new Error(stderr || error.message)) : yes(stdout)),
     );
@@ -208,7 +216,10 @@ function errorMessage(error: unknown): string {
     return "Alerts disabled, inaccessible, or insufficient GitHub permissions (403/404).";
   if (/timed|timeout|killed|SIGTERM/i.test(message))
     return "Request timed out; previous results may be stale.";
-  return "GitHub request failed. Check gh installation, connectivity, and permissions.";
+  const detail = message
+    .replace(/(?:gh[pousr]_[A-Za-z0-9_]+|github_pat_[A-Za-z0-9_]+|Bearer\s+\S+)/gi, "[redacted]")
+    .slice(0, 300);
+  return `GitHub request failed. Check gh installation, connectivity, and permissions. ${detail}`;
 }
 function string(value: unknown): string {
   return typeof value === "string" ? value.slice(0, 16000) : "";
@@ -275,10 +286,14 @@ export async function alerts(
         ],
         { timeout: Math.min(12000, remaining) },
       );
-      const boundary = /\r?\n\r?\n/.exec(raw);
-      if (!boundary || !raw.startsWith("HTTP/")) throw new Error("Malformed HTTP response");
-      const headers = raw.slice(0, boundary.index);
-      const data: unknown = JSON.parse(raw.slice(boundary.index + boundary[0].length));
+      // Tool-manager shims may emit a notice before gh's HTTP status line.
+      const status = /^HTTP\/[\d.]+\s+200\b[^\r\n]*\r?\n/m.exec(raw);
+      if (!status) throw new Error("Malformed HTTP response");
+      const response = raw.slice(status.index);
+      const boundary = /\r?\n\r?\n/.exec(response);
+      if (!boundary) throw new Error("Malformed HTTP response");
+      const headers = response.slice(0, boundary.index);
+      const data: unknown = JSON.parse(response.slice(boundary.index + boundary[0].length));
       const link = /^link:\s*(.+)$/im.exec(headers)?.[1];
       const next = link && /<([^>]+)>;\s*rel="next"/.exec(link)?.[1];
       if (link && /rel="next"/.test(link) && !next) throw new Error("Malformed pagination link");

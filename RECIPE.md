@@ -1,56 +1,55 @@
 # Dependabot dashboard
 
-A native herdr-app security-alert dashboard for the GitHub repositories checked
-out on this computer. A compact launcher beneath tabs opens a themed side panel
-or native tab. There is no GitHub-write control.
+A native herdr-app dashboard for security alerts in locally checked-out GitHub
+repositories. The sidebar footer reads Settings, Dependabot, Tasks, Add machine.
+Dependabot opens a full native tab like Tasks, not a strip or side panel.
 
 ## What you see
 
-A 40px launcher strip. The panel has a 42px header with Refresh, confirmed open
-alert totals and checked/unavailable repository counts, a search input, wrapping
-severity buttons and an alerts/unavailable filter. A scrollable list shows
-repositories with counts, severity breakdowns and freshness. Expanding a repo
-reveals alert rows; selecting an alert shows its advisory, package, manifest,
-scope, vulnerable range, patch version and GitHub link. Theme surface/chrome,
-foreground/muted/border/accent colors follow the user's appearance.
+The footer has 28px rows and 125px total height with Tasks present; 97px without.
+It follows theme chrome/muted/hover colors and collapses to icons in a narrow
+sidebar. Settings retains its update indicator. The full-tab dashboard has a
+42px header with Refresh, confirmed alert totals and checked/unavailable counts,
+search, severity buttons and an issues-only filter. A scrollable repository
+list expands into alerts and advisory details, including patch and GitHub links.
 
 ## How it behaves
 
-Load on first panel display, then manual refresh only. Two workers fetch alerts
-and progressively update rows. Distinguish discovering/loading, genuine zero,
-filtered-empty, stale previous results and unavailable data. Errors never become
-zero. Search combines repository/advisory/package/CVE fields with severity and
-issues-only filtering. Click rows to expand/collapse and links to open the browser.
-No agent status or autonomous repairs. Existing app commands can refresh, open,
-toggle issues or step through repos/alerts without new global keybindings.
+The footer does not fetch data. Dependabot opens a dashboard mod tab in the
+current local space; clicking again reuses a matching tab. Tasks retains the
+same reuse-first behavior, Settings opens settings, Add machine opens its picker.
+Remote spaces are not used to execute the local backend.
+
+The dashboard loads once, then refreshes manually. Two workers progressively
+update results. Loading, clean zero, filtered-empty, failed and stale states are
+distinct; errors never become zero. Search and severity filters compose. Click
+a repo, then an alert, for advisory details. Links open in the system browser.
 
 ## Built from
 
-`mods/dependabot/main.js` extends GPUI View, using native InputState/Input,
-theme, exec, props, nextCommand, run, layout/focus and cx.open_url. Pure model
-and client modules handle filters, stale merge, response validation and bounded
-workers. Installed config pins Node plus `dist/cli.js`. The strip role performs
-no network work; panel role uses backend discovery and per-repository alerts.
-The installer adds a block under tabs and a panel child to panel-body while
-preserving unrelated nodes. A missing standard panel container falls back to tab.
+One GPUI View with footer and dashboard roles. Native InputState/Input, theme,
+spaces/panes/run, layout/updates, nextCommand, exec and cx.open_url are used.
+Pure model/client modules handle filter/state logic and tab reuse. Installed
+config pins Node plus dist/cli.js. The installer replaces only a known Tasks
+or standard Settings sidebar-footer, leaves original mod files untouched,
+backs up personal layouts, removes owned legacy strip/panel blocks, and refuses
+unknown custom footers or ID conflicts.
 
-The TypeScript backend scans local .git directories/files, reads Git remotes,
-and calls authenticated `gh api --include --method GET`, following validated
-GitHub cursor Link headers. Never use numbered pages for this endpoint.
+The TypeScript backend scans .git directories/files, reads Git remotes and
+uses authenticated gh api --include --method GET. Dependabot requires cursor
+Link pagination, never numeric page parameters.
 
 ## Watch out
 
-No DOM, CSS, React, Node APIs or retained cx inside the native mod. The host exec
-limit is 30s, so backend deadlines are 22s. Discovery/API caps and failures must
-be visible, not silently dropped. Do not persist credentials or alert data.
-Do not patch shipped layouts or other mods. Tests and screenshots must use
-fictional data; never publish the user's sidebar, local paths or live alerts.
-Linux is the only locally verified platform.
+No DOM, React, Node APIs or retained cx in native UI code. Backend deadlines
+are below the host's 30-second exec limit. Make limits and partial/unavailable
+data honest. Never persist credentials, publish private alert data or modify
+shipped layouts. The Tasks icon is from the installed Tasks mod only when that
+footer was present. Linux is the only locally verified platform.
 
 ## Done when
 
-Fixture tests cover discovery/worktrees/dedup/bounds, Link pagination, errors
-and no-false-zero behavior, queue bounds, stale/search/severity UI behavior and
-safe repeat installation. Build, type checks, lint/format and CI pass. Native
-check passes and the installed dashboard is visually inspected in the running
-app, including actual asynchronous results and interactions.
+Tests prove footer order, full-tab creation/reuse, local-space selection, safe
+legacy migration, filters/details/links/stale results, cursor pagination, errors,
+bounded workers and repeat installation. Build, types, lint/format, hosted CI
+and native checks pass; inspect the installed footer/dashboard visually.

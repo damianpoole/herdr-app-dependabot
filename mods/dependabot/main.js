@@ -1,8 +1,19 @@
-import { View, div } from "gpui-kit";
+import { View, div, svg } from "gpui-kit";
 import { h_flex, v_flex, Input, InputState } from "gpui-base";
-import { theme, exec, props, run, layout, focused, nextCommand, notify } from "herdr";
+import {
+  theme,
+  exec,
+  props,
+  run,
+  layout,
+  spaces,
+  panes,
+  updates,
+  nextCommand,
+  notify,
+} from "herdr";
 import config from "./config.js";
-import { call, fetchRows } from "./client.js";
+import { call, fetchRows, openTab } from "./client.js";
 import {
   severities,
   mergeResult,
@@ -36,7 +47,8 @@ export default class Dependabot extends View {
       for (;;) {
         const command = await nextCommand();
         if (command === "focus") this.search.focus();
-        if (command === "refresh" && this.config.role !== "strip") this.refresh(cx);
+        if (command === "refresh" && !["footer", "strip"].includes(this.config.role))
+          this.refresh(cx);
         if (command === "open") this.openPanel();
         if (command === "issues") {
           this.onlyIssues = !this.onlyIssues;
@@ -57,7 +69,7 @@ export default class Dependabot extends View {
         }
       }
     });
-    if (this.config.role !== "strip") {
+    if (!["footer", "strip"].includes(this.config.role)) {
       cx.timer.every(60000, (cx) => cx.notify());
       this.refresh(cx);
     }
@@ -102,22 +114,83 @@ export default class Dependabot extends View {
   }
 
   openPanel() {
-    const tree = layout();
     if (
-      findBlock(tree, "dependabot-panel") &&
-      findBlock(tree, "panel-body") &&
-      findBlock(tree, "panel")
-    ) {
-      run("layout.show", { id: "panel" });
-      run("layout.select", { stack: "panel-body", child: "dependabot-panel" });
-    } else if (focused()?.space)
-      run("tab.new", {
-        space: focused().space,
-        name: "Dependabot",
+      !openTab({
+        spaces: spaces(),
+        panes: panes(),
+        run,
         mod: "dependabot",
-        props: { ...this.config, role: "panel" },
-      });
-    else notify({ title: "Dependabot", body: "Open a space first.", level: "info" });
+        name: "Dependabot",
+        props: { ...this.config, role: "dashboard" },
+      })
+    )
+      notify({ title: "Dependabot", body: "Open a local space first.", level: "info" });
+  }
+
+  footer(t) {
+    const collapsed = (findBlock(layout(), "sidebar")?.size?.px ?? Infinity) < 160;
+    const row = (id, icon, label, action, dim = false) =>
+      h_flex()
+        .id(id)
+        .h(28)
+        .px(8)
+        .gap(9)
+        .items_center()
+        .rounded(8)
+        .text_color(dim ? t.dim : t.muted)
+        .hover((s) => s.bg(t.hover).text_color(t.foreground))
+        .cursor_pointer()
+        .on_click(action)
+        .child(icon)
+        .when(!collapsed, (el) => el.child(label));
+    return v_flex()
+      .id("dependabot-footer")
+      .size_full()
+      .bg(t.chrome)
+      .border_t(1)
+      .border_color(t.border)
+      .px(8)
+      .pt(4)
+      .pb(8)
+      .text_size(13)
+      .child(
+        row("settings", svg("mods/workspace-chrome/settings.svg").size(14), "Settings", () =>
+          run("app.settings"),
+        ).when(Boolean(updates().app.ready), (el) =>
+          el.child(div().size(6).rounded_full().bg(t.accent)),
+        ),
+      )
+      .child(row("dependabot-open", div().w(14).child("◇"), "Dependabot", () => this.openPanel()))
+      .when(this.config.tasks === true, (el) =>
+        el.child(
+          row(
+            "obsidian-tasks",
+            svg("mods/obsidian-tasks-footer/tasks.svg").size(14),
+            "Tasks",
+            () => {
+              if (
+                !openTab({
+                  spaces: spaces(),
+                  panes: panes(),
+                  run,
+                  mod: "obsidian-tasks",
+                  name: "Obsidian Tasks",
+                })
+              )
+                run("mod.open", { name: "obsidian-tasks" });
+            },
+          ),
+        ),
+      )
+      .child(
+        row(
+          "machine",
+          svg("mods/workspace-chrome/plus.svg").size(14),
+          "Add machine",
+          () => run("mod.open", { name: "machine-add" }),
+          true,
+        ),
+      );
   }
 
   button(id, label, action, t, active = false) {
@@ -263,6 +336,7 @@ export default class Dependabot extends View {
 
   render() {
     const t = theme();
+    if (this.config.role === "footer") return this.footer(t);
     if (this.config.role === "strip")
       return h_flex()
         .id("dependabot-launcher")

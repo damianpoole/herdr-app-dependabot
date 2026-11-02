@@ -12,6 +12,12 @@ const layout = () => ({
   type: "column",
   theme: "mine",
   children: [
+    {
+      id: "sidebar-footer",
+      type: "block",
+      size: { px: 97 },
+      content: { mod: "obsidian-tasks-footer" },
+    },
     { id: "tabs", type: "block", content: { mod: "tabs" }, size: { px: 31 } },
     { id: "ship-it", type: "block", content: { mod: "ship-it" } },
     {
@@ -26,38 +32,45 @@ const layout = () => ({
   ],
 });
 
-test("launcher is below tabs, not beside Ship-it; selection and unrelated content survive", () => {
-  const before = layout();
-  const after = integrateLayout(before);
+test("footer replaces only known footer and preserves unrelated mods and panel selection", () => {
+  const before = layout(),
+    after = integrateLayout(before);
   assert.deepEqual(before, layout());
-  assert.deepEqual(after.children[0], before.children[0]);
-  assert.deepEqual(after.children[1], {
+  assert.deepEqual(after.children.slice(1), before.children.slice(1));
+  assert.deepEqual(after.children[0], {
+    id: "sidebar-footer",
+    type: "block",
+    size: { px: 125 },
+    content: { mod: "dependabot", props: { role: "footer", tasks: true } },
+  });
+  assert.deepEqual(integrateLayout(after), after);
+});
+
+test("migration removes old dashboard blocks and only repairs selection if removed", () => {
+  const tree = layout();
+  tree.children.splice(2, 0, {
     id: "dependabot-strip",
     type: "block",
-    size: { px: 40 },
     content: { mod: "dependabot", props: { role: "strip" } },
   });
-  assert.deepEqual(after.children[2], before.children[1]);
-  assert.equal(after.children[3].active, "files");
-  assert.equal(after.children[3].hidden, true);
-  assert.deepEqual(after.children[3].children[0], before.children[2].children[0]);
-  assert.equal(after.children[3].children[1].id, "dependabot-panel");
-  assert.deepEqual(integrateLayout(after), after);
+  const stack = tree.children.at(-1);
+  stack.children.push({
+    id: "dependabot-panel",
+    type: "block",
+    content: { mod: "dependabot", props: { role: "panel" } },
+  });
+  assert.equal(integrateLayout(tree).children.at(-1).active, "files");
+  stack.active = "dependabot-panel";
+  const after = integrateLayout(tree);
+  assert.equal(after.children.at(-1).active, "files");
+  assert.doesNotMatch(JSON.stringify(after), /dependabot-strip|dependabot-panel/);
+  const standard = layout();
+  standard.children[0].content = { mod: "workspace-chrome", props: { footer: true } };
+  assert.equal(integrateLayout(standard).children[0].content.props.tasks, false);
+  assert.equal(integrateLayout(standard).children[0].size.px, 97);
 });
 
-test("no panel stack needs only a launcher; nested tabs are supported", () => {
-  const tree = layout();
-  tree.children.pop();
-  const nested = { type: "row", children: [tree] };
-  const after = integrateLayout(nested);
-  assert.equal(after.children[0].children[1].id, "dependabot-strip");
-  assert.doesNotMatch(JSON.stringify(after), /dependabot-panel/);
-  assert.deepEqual(integrateLayout(after), after);
-  tree.children.push({ id: "panel-body", type: "block", content: { mod: "personal" } });
-  assert.deepEqual(integrateLayout(tree).children.at(-1), tree.children.at(-1));
-});
-
-test("conflicting and duplicate IDs fail rather than replace content", () => {
+test("conflicting IDs and unknown custom footers are refused", () => {
   for (const id of ["dependabot-strip", "dependabot-panel"]) {
     const tree = layout();
     tree.children.push({ id, type: "block", content: { mod: "personal" } });
@@ -66,7 +79,10 @@ test("conflicting and duplicate IDs fail rather than replace content", () => {
   const tree = layout();
   tree.floating = [{ id: "tabs", type: "block" }];
   assert.throws(() => integrateLayout(tree), /Duplicate/);
-  assert.throws(() => integrateLayout({ type: "column", children: [] }), /No tabs/);
+  assert.throws(() => integrateLayout({ type: "column", children: [] }), /sidebar-footer/);
+  const custom = layout();
+  custom.children[0].content.mod = "my-custom-footer";
+  assert.throws(() => integrateLayout(custom), /supported sidebar-footer/);
 });
 
 async function fixture(t) {

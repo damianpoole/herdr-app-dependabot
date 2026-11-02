@@ -1,3 +1,24 @@
+// Follow the Tasks launcher's reuse-first behavior, always on this machine.
+export function openTab({ spaces, panes, run, mod, name, props }) {
+  const ordered = [
+    ...spaces.filter((s) => s.active && !s.machine),
+    ...spaces.filter((s) => !s.active && !s.machine),
+  ];
+  for (const space of ordered) {
+    for (const tab of space.tabs ?? []) {
+      const pane = panes.find((p) => p.tab === tab.id && p.mod === mod);
+      if (!pane) continue;
+      run("space.select", { id: space.id });
+      run("tab.select", { id: tab.id });
+      run("pane.focus", { pane: pane.pane });
+      return true;
+    }
+  }
+  if (!ordered.length) return false;
+  run("tab.new", { space: ordered[0].id, name, mod, ...(props ? { props } : {}) });
+  return true;
+}
+
 export async function call(exec, config, args) {
   if (
     typeof config.command !== "string" ||
