@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.pi/
+*.tgz
+*.local.*
+mods/dependabot/config.local.js
+mods/*/gpui-kit.d.ts
+mods/*/herdr.d.ts
+mods/*/jsconfig.json

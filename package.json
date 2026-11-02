@@ -1,0 +1,26 @@
+{
+  "name": "herdr-app-dependabot",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Native herdr-app dashboard for local repositories' Dependabot security alerts",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "check": "tsc --noEmit",
+    "test": "npm run build && node --test test/*.test.mjs",
+    "lint": "oxlint --deny-warnings --ignore-pattern '**/*.d.ts' src mods scripts test",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
+    "install:mod": "node scripts/install.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "oxfmt": "^0.75.0",
+    "oxlint": "^1.90.0",
+    "typescript": "~5.9.3"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
